@@ -1,11 +1,7 @@
 import string
 import requests
-import faker
-import flask
-import datetime
 from flask import Flask
 from flask import request
-from faker import Faker
 import random
 
 from marshmallow import validate
@@ -13,7 +9,6 @@ from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 app = Flask(__name__)
-
 
 
 
@@ -49,7 +44,7 @@ def generate_password(length, specials, digits):
     if not 1 < length < 100:
         return 'ERROR: out of range [1..100]'
 
-    param = ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
+    param_len = ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
 
     if specials:
         param += string.punctuation
@@ -57,9 +52,7 @@ def generate_password(length, specials, digits):
     if digits:
         param += string.digits
 
-    return param
-
-
+    return param_len
 
 
 @app.route("/bitcoin_rate")
