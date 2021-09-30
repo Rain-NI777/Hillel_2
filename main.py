@@ -144,22 +144,9 @@ def get_customers(company):
 @app.route('/genres_durations')
 @profile()
 def get_genre_durations():
-    current_genre_id = 1
-    result = {}
-
-    while True:
-        query = 'SELECT SUM(Milliseconds) FROM tracks WHERE GenreId=' \
-                + str(current_genre_id)
-        record = execute_query(query)
-
-        if str(record) == '[(None,)]':
-            break
-        else:
-            result[current_genre_id] = record
-
-        current_genre_id += 1
-
-    return str(result)
+    query = 'SELECT t.GenreId, SUM(Milliseconds) FROM tracks t GROUP BY t.GenreId'
+    records = execute_query(query)
+    return str(records)
 
 
 @app.route('/greatest_hits')
