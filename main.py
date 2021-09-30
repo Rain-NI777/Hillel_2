@@ -1,19 +1,22 @@
+import datetime
+import random
+import re
 import string
 import requests
-import faker
-import flask
-import datetime
-from flask import Flask
-from flask import request
 from faker import Faker
-import random
 
+from flask import jsonify, Response, render_template
+
+from flask import Flask
 from marshmallow import validate
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
-app = Flask(__name__)
+from db import execute_query
+from http_status import HTTP_200_OK, HTTP_204_NO_CONTENT
+from utils import format_records, profile
 
+app = Flask(__name__)
 
 
 
@@ -49,7 +52,7 @@ def generate_password(length, specials, digits):
     if not 1 < length < 100:
         return 'ERROR: out of range [1..100]'
 
-    param = ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
+    param_len = ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=length))
 
     if specials:
         param += string.punctuation
@@ -57,9 +60,7 @@ def generate_password(length, specials, digits):
     if digits:
         param += string.digits
 
-    return param
-
-
+    return param_len
 
 
 @app.route("/bitcoin_rate")
@@ -81,6 +82,112 @@ def get_bitcoin_rate(currency):
         if entry['code'] == currency:
             stats[entry['rate']] = stats.get(entry['rate'], entry['code'])
     return stats
+
+
+
+@app.route('/unique_names')
+def get_unique_names():
+    query = 'select FirstName from customers'
+
+    records = execute_query(query)
+
+    names = []
+    for record in records:
+        unique = True
+        for name in names:
+            if record == name:
+                unique = False
+        if unique:
+            names.append(record)
+
+    print(names)
+    return ''.join('Количество уникальных имён: ' + str(len(names)))
+
+
+
+@app.route('/tracks_count')
+def get_tracks_count():
+    query = 'select * from tracks'
+
+    records = execute_query(query)
+    return ''.join('Количество записей в таблице Tracks: ' + str(len(records)))
+
+
+
+@app.route('/fill_companies')
+@use_kwargs(
+    {
+        "company": fields.Str(
+            required=False,
+            missing=None,
+        ),
+    },
+    location="query",
+)
+def get_customers(company):
+    query = 'SELECT Company FROM customers'
+    records = execute_query(query)
+
+    companies = []
+
+    for record in records:
+        if str(record) == '(None,)':
+            fake = Faker()
+            companies.append((fake.company()))
+        else:
+            companies.append(record)
+
+    return str(companies)
+
+
+
+@app.route('/genres_durations')
+@profile()
+def get_genre_durations():
+    current_genre_id = 1
+    result = {}
+
+    while True:
+        query = 'SELECT SUM(Milliseconds) FROM tracks WHERE GenreId=' \
+                + str(current_genre_id)
+        record = execute_query(query)
+
+        if str(record) == '[(None,)]':
+            break
+        else:
+            result[current_genre_id] = record
+
+        current_genre_id += 1
+
+    return str(result)
+
+
+@app.route('/greatest_hits')
+@use_kwargs(
+    {
+        "count": fields.Int(
+            required=False,
+            missing=None,
+        ),
+    },
+    location="query",
+)
+@profile()
+def get_greatest_hits(count):
+    query = '''SELECT 
+        t.name, count(*) as math, count(*)*t.UnitPrice as cal 
+        FROM tracks t 
+        inner join 
+        invoice_items I on I.TrackId = t.TrackId 
+        GROUP BY t.TrackId 
+        order by 
+        cal DESC'''
+    if count:
+        query += ' LIMIT ' + str(count)
+
+    records = execute_query(query)
+
+    return str(records)
 
 
 
