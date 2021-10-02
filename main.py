@@ -16,8 +16,8 @@ from db import execute_query
 from http_status import HTTP_200_OK, HTTP_204_NO_CONTENT
 from utils import format_records, profile
 
-app = Flask(__name__)
 
+app = Flask(__name__)
 
 
 @app.route("/password")
@@ -61,6 +61,7 @@ def generate_password(length, specials, digits):
         param += string.digits
 
     return param_len
+
 
 
 @app.route("/bitcoin_rate")
@@ -149,6 +150,7 @@ def get_genre_durations():
     return str(records)
 
 
+
 @app.route('/greatest_hits')
 @use_kwargs(
     {
@@ -162,13 +164,13 @@ def get_genre_durations():
 @profile()
 def get_greatest_hits(count):
     query = '''SELECT 
-        t.name, count(*) as math, count(*)*t.UnitPrice as cal 
+        t.name, count(*) as sum, count(*)*t.UnitPrice as calc 
         FROM tracks t 
         inner join 
         invoice_items I on I.TrackId = t.TrackId 
         GROUP BY t.TrackId 
         order by 
-        cal DESC'''
+        calc DESC'''
     if count:
         query += ' LIMIT ' + str(count)
 
